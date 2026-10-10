@@ -1,0 +1,1234 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Крестики-Нолики PRO + ТВ & Чит-Телефон</title>
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- FontAwesome Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- Canvas Confetti -->
+    <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.6.0/dist/confetti.browser.min.js"></script>
+    <!-- Google Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&family=Outfit:wght@300;400;600;800&family=VT323&display=swap" rel="stylesheet">
+
+    <style>
+        body {
+            font-family: 'Outfit', sans-serif;
+            background-color: #0B0F19;
+            color: #F3F4F6;
+            user-select: none;
+            overflow-x: hidden;
+        }
+
+        .pixel-font {
+            font-family: 'Press Start 2P', monospace;
+        }
+
+        .vt-font {
+            font-family: 'VT323', monospace;
+        }
+
+        /* CRT Screen Effect */
+        .crt-container {
+            position: relative;
+            overflow: hidden;
+            border-radius: 12px;
+            box-shadow: inset 0 0 50px rgba(0,0,0,0.8), 0 0 20px rgba(0,255,200,0.2);
+        }
+
+        .crt-scanlines::before {
+            content: " ";
+            display: block;
+            position: absolute;
+            top: 0; left: 0; bottom: 0; right: 0;
+            background: linear-gradient(rgba(18, 16, 16, 0) 50%, rgba(0, 0, 0, 0.35) 50%), linear-gradient(90deg, rgba(255, 0, 0, 0.06), rgba(0, 255, 0, 0.02), rgba(0, 0, 255, 0.06));
+            z-index: 20;
+            background-size: 100% 4px, 6px 100%;
+            pointer-events: none;
+        }
+
+        .crt-screen-on {
+            animation: turnOn 0.4s ease-out forwards;
+        }
+
+        .crt-screen-off {
+            filter: brightness(0);
+            transition: all 0.3s ease;
+        }
+
+        @keyframes turnOn {
+            0% { transform: scale(1, 0.005) cubic-bezier(0.1, 0.1, 0.1, 1); opacity: 0.1; filter: brightness(5); }
+            50% { transform: scale(1, 1); opacity: 1; filter: brightness(2); }
+            100% { transform: scale(1, 1); opacity: 1; filter: brightness(1); }
+        }
+
+        /* Glassmorphism Styling */
+        .glass-panel {
+            background: rgba(17, 24, 39, 0.7);
+            backdrop-filter: blur(12px);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        .glass-card {
+            background: rgba(30, 41, 59, 0.6);
+            backdrop-filter: blur(8px);
+            border: 1px solid rgba(255, 255, 255, 0.05);
+        }
+
+        .neon-border-cyan {
+            box-shadow: 0 0 15px rgba(6, 182, 212, 0.4);
+        }
+
+        .neon-border-pink {
+            box-shadow: 0 0 15px rgba(236, 72, 153, 0.4);
+        }
+
+        .phone-case {
+            box-shadow: 0 0 35px rgba(168, 85, 247, 0.3), inset 0 0 15px rgba(255, 255, 255, 0.1);
+        }
+
+        /* Custom Scrollbar */
+        ::-webkit-scrollbar {
+            width: 8px;
+        }
+        ::-webkit-scrollbar-track {
+            background: rgba(15, 23, 42, 0.6);
+        }
+        ::-webkit-scrollbar-thumb {
+            background: rgba(59, 130, 246, 0.5);
+            border-radius: 4px;
+        }
+        ::-webkit-scrollbar-thumb:hover {
+            background: rgba(59, 130, 246, 0.8);
+        }
+    </style>
+</head>
+<body class="min-h-screen flex flex-col justify-between selection:bg-cyan-500 selection:text-white">
+
+    <!-- HEADER / NAVIGATION -->
+    <header class="sticky top-0 z-50 glass-panel border-b border-gray-800 px-4 py-3 shadow-lg">
+        <div class="max-w-7xl mx-auto flex flex-wrap justify-between items-center gap-4">
+            <!-- Brand Logo -->
+            <div class="flex items-center gap-3">
+                <div class="w-10 h-10 rounded-xl bg-gradient-to-tr from-cyan-500 via-indigo-500 to-fuchsia-500 flex items-center justify-center text-xl font-black text-white shadow-lg animate-pulse">
+                    <i class="fa-solid fa-gamepad"></i>
+                </div>
+                <div>
+                    <h1 class="text-xl font-extrabold tracking-wider bg-clip-text text-transparent bg-gradient-to-r from-cyan-400 via-fuchsia-400 to-amber-300">
+                        КРЕСТИКИ-НОЛИКИ <span class="text-xs px-2 py-0.5 rounded bg-cyan-950 text-cyan-400 border border-cyan-500/30">PRO</span>
+                    </h1>
+                    <p class="text-xs text-gray-400 hidden sm:block">Телефон + ТВ Музыка + 30 Скинов</p>
+                </div>
+            </div>
+
+            <!-- Coins Display & Audio Quick Control -->
+            <div class="flex items-center gap-3">
+                <!-- Mini TV Audio Status Indicator -->
+                <button onclick="switchTab('tv')" class="flex items-center gap-2 bg-slate-800/80 hover:bg-slate-700/80 border border-indigo-500/30 px-3 py-1.5 rounded-full transition-all group">
+                    <span class="relative flex h-3 w-3">
+                      <span id="tvPulsePing" class="animate-ping absolute inline-flex h-full w-full rounded-full bg-cyan-400 opacity-75 hidden"></span>
+                      <span id="tvPulseDot" class="relative inline-flex rounded-full h-3 w-3 bg-gray-500"></span>
+                    </span>
+                    <i class="fa-solid fa-tv text-cyan-400 text-sm"></i>
+                    <span id="nowPlayingHeader" class="text-xs text-gray-300 max-w-[100px] sm:max-w-[140px] truncate">ТВ выключен</span>
+                </button>
+
+                <!-- Coins Counter -->
+                <div class="flex items-center gap-2 bg-slate-900/90 border border-amber-500/40 px-4 py-1.5 rounded-full shadow-inner">
+                    <i class="fa-solid fa-coins text-amber-400 text-lg animate-bounce"></i>
+                    <span id="coinBalance" class="text-amber-300 font-bold text-lg font-mono">0</span>
+                </div>
+            </div>
+
+            <!-- Primary Navigation Tabs -->
+            <nav class="w-full md:w-auto flex items-center justify-center gap-1 sm:gap-2 overflow-x-auto py-1">
+                <button onclick="switchTab('game')" id="tab-game" class="nav-btn active bg-indigo-600 text-white px-3 sm:px-4 py-2 rounded-xl font-medium text-sm flex items-center gap-2 transition-all shadow-md">
+                    <i class="fa-solid fa-xmark"></i> <span>Игра</span>
+                </button>
+                <button onclick="switchTab('tv')" id="tab-tv" class="nav-btn bg-slate-800 hover:bg-slate-700 text-gray-300 px-3 sm:px-4 py-2 rounded-xl font-medium text-sm flex items-center gap-2 transition-all">
+                    <i class="fa-solid fa-tv text-cyan-400"></i> <span>ТВ & Музыка</span>
+                </button>
+                <button onclick="switchTab('shop')" id="tab-shop" class="nav-btn bg-slate-800 hover:bg-slate-700 text-gray-300 px-3 sm:px-4 py-2 rounded-xl font-medium text-sm flex items-center gap-2 transition-all">
+                    <i class="fa-solid fa-store text-amber-400"></i> <span>Магазин</span>
+                </button>
+                <button onclick="switchTab('minigames')" id="tab-minigames" class="nav-btn bg-slate-800 hover:bg-slate-700 text-gray-300 px-3 sm:px-4 py-2 rounded-xl font-medium text-sm flex items-center gap-2 transition-all">
+                    <i class="fa-solid fa-dice text-fuchsia-400"></i> <span>Мини-Игры</span>
+                </button>
+                <button onclick="switchTab('phone')" id="tab-phone" class="nav-btn bg-slate-800 hover:bg-slate-700 text-gray-300 px-3 sm:px-4 py-2 rounded-xl font-medium text-sm flex items-center gap-2 transition-all">
+                    <i class="fa-solid fa-mobile-screen-button text-emerald-400"></i> <span>Чит-Телефон</span>
+                </button>
+            </nav>
+        </div>
+    </header>
+
+    <!-- MAIN CONTENT VIEWPORTS -->
+    <main class="max-w-7xl mx-auto w-full px-4 py-6 flex-grow">
+
+        <!-- ==================== TAB 1: TIC TAC TOE GAME ==================== -->
+        <section id="view-game" class="tab-content block">
+            <div class="grid grid-cols-1 lg:grid-cols-3 gap-6 items-start">
+
+                <!-- Left Panel: Mode & Settings -->
+                <div class="glass-panel p-5 rounded-2xl shadow-xl flex flex-col gap-4 border-indigo-500/20">
+                    <h2 class="text-lg font-bold text-cyan-400 flex items-center gap-2">
+                        <i class="fa-solid fa-sliders"></i> Настройки Игры
+                    </h2>
+
+                    <!-- Mode Select -->
+                    <div>
+                        <label class="text-xs text-gray-400 mb-1 block">Режим игры:</label>
+                        <div class="grid grid-cols-2 gap-2">
+                            <button onclick="setGameMode('ai')" id="mode-ai" class="mode-btn bg-cyan-600 text-white py-2 px-3 rounded-xl text-sm font-semibold border border-cyan-400/30">
+                                <i class="fa-solid fa-robot mr-1"></i> Против ИИ
+                            </button>
+                            <button onclick="setGameMode('pvp')" id="mode-pvp" class="mode-btn bg-slate-800 text-gray-300 py-2 px-3 rounded-xl text-sm font-semibold hover:bg-slate-700">
+                                <i class="fa-solid fa-user-group mr-1"></i> 2 Игрока
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- AI Difficulty -->
+                    <div id="aiDifficultyGroup">
+                        <label class="text-xs text-gray-400 mb-1 block">Сложность ИИ:</label>
+                        <select id="aiDifficulty" onchange="resetGame()" class="w-full bg-slate-900 border border-slate-700 rounded-xl py-2 px-3 text-sm text-gray-200 focus:outline-none focus:border-cyan-500">
+                            <option value="easy">Лёгкий (Случайные ходы)</option>
+                            <option value="medium" selected>Средний (Обычный)</option>
+                            <option value="hard">Непобедимый (Minimax)</option>
+                        </select>
+                    </div>
+
+                    <!-- Active Skins Indicator -->
+                    <div class="bg-slate-900/80 p-3 rounded-xl border border-slate-800 flex justify-around items-center">
+                        <div class="text-center">
+                            <span class="text-xs text-gray-400 block mb-1">Игрок X</span>
+                            <span id="activeSkinX" class="text-3xl">❌</span>
+                        </div>
+                        <div class="text-gray-600 font-bold">VS</div>
+                        <div class="text-center">
+                            <span class="text-xs text-gray-400 block mb-1">Игрок O / ИИ</span>
+                            <span id="activeSkinO" class="text-3xl">⭕</span>
+                        </div>
+                    </div>
+
+                    <!-- Statistics -->
+                    <div class="bg-slate-900/50 p-4 rounded-xl border border-slate-800/80 space-y-2">
+                        <div class="flex justify-between text-sm">
+                            <span class="text-gray-400">Побед X:</span>
+                            <span id="scoreX" class="font-bold text-cyan-400">0</span>
+                        </div>
+                        <div class="flex justify-between text-sm">
+                            <span class="text-gray-400">Побед O:</span>
+                            <span id="scoreO" class="font-bold text-fuchsia-400">0</span>
+                        </div>
+                        <div class="flex justify-between text-sm">
+                            <span class="text-gray-400">Ничьих:</span>
+                            <span id="scoreDraws" class="font-bold text-amber-400">0</span>
+                        </div>
+                    </div>
+
+                    <button onclick="resetGame()" class="w-full bg-gradient-to-r from-cyan-500 to-indigo-600 hover:from-cyan-400 hover:to-indigo-500 text-white font-bold py-3 rounded-xl shadow-lg transition-all transform active:scale-95 flex items-center justify-center gap-2">
+                        <i class="fa-solid fa-rotate-right"></i> Перезапустить
+                    </button>
+                </div>
+
+                <!-- Center Panel: The Game Board -->
+                <div class="lg:col-span-2 glass-panel p-6 rounded-2xl shadow-xl flex flex-col items-center justify-center min-h-[460px] relative border-cyan-500/20">
+
+                    <!-- Turn / Status Indicator Banner -->
+                    <div id="gameStatusBanner" class="mb-6 px-6 py-2 rounded-full bg-slate-800/90 border border-cyan-500/40 text-cyan-300 font-bold text-center tracking-wide text-lg shadow-md flex items-center gap-3">
+                        <span id="statusIcon"><i class="fa-solid fa-play text-cyan-400"></i></span>
+                        <span id="statusText">Ход игрока X</span>
+                    </div>
+
+                    <!-- Tic Tac Toe Grid -->
+                    <div id="board" class="grid grid-cols-3 gap-3 sm:gap-4 w-full max-w-[360px] aspect-square bg-slate-950 p-3 sm:p-4 rounded-2xl border-2 border-indigo-500/40 shadow-2xl">
+                        <!-- 9 Board Cells generated dynamically or static below -->
+                        <button onclick="makeMove(0)" class="cell bg-slate-900 hover:bg-slate-800/80 rounded-xl text-4xl sm:text-5xl flex items-center justify-center transition-all border border-slate-800 aspect-square shadow-inner"></button>
+                        <button onclick="makeMove(1)" class="cell bg-slate-900 hover:bg-slate-800/80 rounded-xl text-4xl sm:text-5xl flex items-center justify-center transition-all border border-slate-800 aspect-square shadow-inner"></button>
+                        <button onclick="makeMove(2)" class="cell bg-slate-900 hover:bg-slate-800/80 rounded-xl text-4xl sm:text-5xl flex items-center justify-center transition-all border border-slate-800 aspect-square shadow-inner"></button>
+                        <button onclick="makeMove(3)" class="cell bg-slate-900 hover:bg-slate-800/80 rounded-xl text-4xl sm:text-5xl flex items-center justify-center transition-all border border-slate-800 aspect-square shadow-inner"></button>
+                        <button onclick="makeMove(4)" class="cell bg-slate-900 hover:bg-slate-800/80 rounded-xl text-4xl sm:text-5xl flex items-center justify-center transition-all border border-slate-800 aspect-square shadow-inner"></button>
+                        <button onclick="makeMove(5)" class="cell bg-slate-900 hover:bg-slate-800/80 rounded-xl text-4xl sm:text-5xl flex items-center justify-center transition-all border border-slate-800 aspect-square shadow-inner"></button>
+                        <button onclick="makeMove(6)" class="cell bg-slate-900 hover:bg-slate-800/80 rounded-xl text-4xl sm:text-5xl flex items-center justify-center transition-all border border-slate-800 aspect-square shadow-inner"></button>
+                        <button onclick="makeMove(7)" class="cell bg-slate-900 hover:bg-slate-800/80 rounded-xl text-4xl sm:text-5xl flex items-center justify-center transition-all border border-slate-800 aspect-square shadow-inner"></button>
+                        <button onclick="makeMove(8)" class="cell bg-slate-900 hover:bg-slate-800/80 rounded-xl text-4xl sm:text-5xl flex items-center justify-center transition-all border border-slate-800 aspect-square shadow-inner"></button>
+                    </div>
+
+                    <!-- Rewards Info -->
+                    <p class="mt-6 text-xs text-gray-400 flex items-center gap-1">
+                        <i class="fa-solid fa-gift text-amber-400"></i> Награда за победу: <span class="text-amber-300 font-bold">+50 монет</span> | Ничья: <span class="text-amber-300 font-bold">+20 монет</span>
+                    </p>
+                </div>
+            </div>
+        </section>
+
+        <!-- ==================== TAB 2: TV & MUSIC SYNTHESIZER ==================== -->
+        <section id="view-tv" class="tab-content hidden">
+            <div class="max-w-4xl mx-auto flex flex-col items-center">
+
+                <!-- Retro CRT TV Casing -->
+                <div class="w-full bg-zinc-900 border-4 border-amber-900/60 rounded-3xl p-4 sm:p-6 shadow-2xl relative">
+                    
+                    <!-- Antenna Decor -->
+                    <div class="absolute -top-12 left-1/2 transform -translate-x-1/2 flex gap-12 pointer-events-none">
+                        <div class="w-1.5 h-14 bg-gradient-to-t from-gray-600 to-slate-300 rotate-[-25deg] origin-bottom rounded-full"></div>
+                        <div class="w-1.5 h-14 bg-gradient-to-t from-gray-600 to-slate-300 rotate-[25deg] origin-bottom rounded-full"></div>
+                    </div>
+
+                    <!-- TV Header Brand -->
+                    <div class="flex justify-between items-center mb-3 text-xs font-mono text-zinc-500 px-2">
+                        <span><i class="fa-solid fa-bolt text-yellow-500"></i> CYBER-VISION 3000</span>
+                        <span id="tvChanDisplay" class="bg-black/60 px-2 py-0.5 rounded text-cyan-400 border border-cyan-500/30">КАНАЛ 1</span>
+                    </div>
+
+                    <!-- CRT Display Screen -->
+                    <div class="crt-container crt-scanlines bg-slate-950 w-full aspect-video sm:aspect-[16/9] relative flex flex-col justify-between p-4 border-4 border-zinc-800">
+                        
+                        <!-- Visualizer Canvas -->
+                        <canvas id="tvCanvas" class="absolute inset-0 w-full h-full z-0 block"></canvas>
+
+                        <!-- Screen Overlay Text / Track Info -->
+                        <div class="relative z-10 flex justify-between items-start text-xs font-mono">
+                            <div class="bg-black/70 p-2 rounded border border-cyan-500/30 backdrop-blur-sm">
+                                <p class="text-cyan-400 font-bold text-sm tracking-wider" id="tvTrackName">Track 1: 8-Bit Arcade Beat</p>
+                                <p class="text-gray-400" id="tvGenre">Жанр: Retro Chiptune Synth</p>
+                            </div>
+                            <div class="bg-black/70 px-3 py-1 rounded text-emerald-400 font-bold border border-emerald-500/30">
+                                <span id="tvStatusBadge">PLAYING</span>
+                            </div>
+                        </div>
+
+                        <!-- Equalizer Animation Bars -->
+                        <div class="relative z-10 flex justify-center items-end gap-1 h-12 my-auto opacity-80" id="equalizerVisual">
+                            <div class="w-2 bg-cyan-400 rounded-t h-8 animate-pulse"></div>
+                            <div class="w-2 bg-cyan-400 rounded-t h-12 animate-pulse"></div>
+                            <div class="w-2 bg-fuchsia-400 rounded-t h-5 animate-pulse"></div>
+                            <div class="w-2 bg-fuchsia-400 rounded-t h-10 animate-pulse"></div>
+                            <div class="w-2 bg-amber-400 rounded-t h-7 animate-pulse"></div>
+                            <div class="w-2 bg-emerald-400 rounded-t h-11 animate-pulse"></div>
+                        </div>
+
+                        <!-- Bottom Screen Metadata -->
+                        <div class="relative z-10 flex justify-between items-end text-xs font-mono text-gray-400 bg-black/60 p-2 rounded backdrop-blur-sm">
+                            <div>ЭФФЕКТ: <span id="tvEffectName" class="text-fuchsia-400">Matrix Rain</span></div>
+                            <div class="vt-font text-xl text-yellow-400 tracking-widest" id="tvDigitalClock">00:00:00</div>
+                        </div>
+                    </div>
+
+                    <!-- TV Physical Control Buttons Panel -->
+                    <div class="mt-6 bg-zinc-950 p-4 rounded-2xl border border-zinc-800 flex flex-wrap items-center justify-between gap-4">
+                        
+                        <!-- Power Button -->
+                        <button onclick="toggleTVPower()" id="tvPowerBtn" class="bg-red-600 hover:bg-red-500 text-white font-bold p-3 rounded-full shadow-lg transition-all flex items-center justify-center w-12 h-12 border-2 border-red-400 active:scale-95">
+                            <i class="fa-solid fa-power-off text-lg"></i>
+                        </button>
+
+                        <!-- Track Controls -->
+                        <div class="flex items-center gap-2">
+                            <button onclick="prevTrack()" class="bg-zinc-800 hover:bg-zinc-700 text-white p-3 rounded-xl border border-zinc-700 text-sm">
+                                <i class="fa-solid fa-backward"></i>
+                            </button>
+                            <button onclick="togglePlayMusic()" id="tvPlayBtn" class="bg-cyan-600 hover:bg-cyan-500 text-white font-bold px-5 py-3 rounded-xl border border-cyan-400 text-sm flex items-center gap-2 shadow-md">
+                                <i class="fa-solid fa-pause"></i> Пауза
+                            </button>
+                            <button onclick="nextTrack()" class="bg-zinc-800 hover:bg-zinc-700 text-white p-3 rounded-xl border border-zinc-700 text-sm">
+                                <i class="fa-solid fa-forward"></i>
+                            </button>
+                        </div>
+
+                        <!-- Channel Selector Buttons -->
+                        <div class="flex items-center gap-1.5 bg-zinc-900 p-1.5 rounded-xl border border-zinc-800">
+                            <span class="text-xs text-gray-500 font-mono px-1">КАНАЛ:</span>
+                            <button onclick="changeChannel(0)" class="chan-btn bg-cyan-600 text-white px-2.5 py-1 rounded text-xs font-bold">1</button>
+                            <button onclick="changeChannel(1)" class="chan-btn bg-zinc-800 text-gray-300 hover:bg-zinc-700 px-2.5 py-1 rounded text-xs font-bold">2</button>
+                            <button onclick="changeChannel(2)" class="chan-btn bg-zinc-800 text-gray-300 hover:bg-zinc-700 px-2.5 py-1 rounded text-xs font-bold">3</button>
+                            <button onclick="changeChannel(3)" class="chan-btn bg-zinc-800 text-gray-300 hover:bg-zinc-700 px-2.5 py-1 rounded text-xs font-bold">4</button>
+                            <button onclick="changeChannel(4)" class="chan-btn bg-zinc-800 text-gray-300 hover:bg-zinc-700 px-2.5 py-1 rounded text-xs font-bold">5</button>
+                        </div>
+
+                        <!-- Volume Slider -->
+                        <div class="flex items-center gap-2 bg-zinc-900 px-3 py-2 rounded-xl border border-zinc-800 w-full sm:w-auto">
+                            <i class="fa-solid fa-volume-high text-gray-400 text-sm"></i>
+                            <input type="range" id="volumeSlider" min="0" max="1" step="0.05" value="0.3" oninput="setVolume(this.value)" class="w-24 accent-cyan-400 cursor-pointer">
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Playlist Details Card -->
+                <div class="w-full mt-6 glass-panel p-5 rounded-2xl">
+                    <h3 class="text-sm font-bold text-gray-300 mb-3 flex items-center gap-2">
+                        <i class="fa-solid fa-list-music text-cyan-400"></i> Список встроенных треков Synth/Chiptune (Web Audio API)
+                    </h3>
+                    <div class="space-y-2 text-xs" id="playlistItems">
+                        <!-- Playlist items filled dynamically -->
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- ==================== TAB 3: 30 SKINS SHOP CATALOG ==================== -->
+        <section id="view-shop" class="tab-content hidden">
+            <div class="glass-panel p-6 rounded-2xl shadow-xl border-amber-500/20">
+                
+                <!-- Shop Header & Filters -->
+                <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-6 border-b border-gray-800 pb-4">
+                    <div>
+                        <h2 class="text-xl font-bold text-amber-400 flex items-center gap-2">
+                            <i class="fa-solid fa-store"></i> Магазин Скинов (30 Уникальных Скинов)
+                        </h2>
+                        <p class="text-xs text-gray-400">Покупайте новые крестики и нолики за монеты!</p>
+                    </div>
+
+                    <!-- Category Filters -->
+                    <div class="flex flex-wrap gap-1.5" id="shopFilters">
+                        <button onclick="filterShop('all')" class="shop-filter-btn active bg-amber-500 text-black px-3 py-1 rounded-lg text-xs font-bold">Все</button>
+                        <button onclick="filterShop('classic')" class="shop-filter-btn bg-slate-800 text-gray-300 hover:bg-slate-700 px-3 py-1 rounded-lg text-xs font-bold">Классика</button>
+                        <button onclick="filterShop('space')" class="shop-filter-btn bg-slate-800 text-gray-300 hover:bg-slate-700 px-3 py-1 rounded-lg text-xs font-bold">Космос</button>
+                        <button onclick="filterShop('hero')" class="shop-filter-btn bg-slate-800 text-gray-300 hover:bg-slate-700 px-3 py-1 rounded-lg text-xs font-bold">Герои</button>
+                        <button onclick="filterShop('animal')" class="shop-filter-btn bg-slate-800 text-gray-300 hover:bg-slate-700 px-3 py-1 rounded-lg text-xs font-bold">Животные</button>
+                        <button onclick="filterShop('food')" class="shop-filter-btn bg-slate-800 text-gray-300 hover:bg-slate-700 px-3 py-1 rounded-lg text-xs font-bold">Еда</button>
+                        <button onclick="filterShop('nature')" class="shop-filter-btn bg-slate-800 text-gray-300 hover:bg-slate-700 px-3 py-1 rounded-lg text-xs font-bold">Природа</button>
+                    </div>
+                </div>
+
+                <!-- Skins Grid Catalog -->
+                <div id="skinsGrid" class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 lg:grid-cols-6 gap-3">
+                    <!-- 30 Skin Cards Rendered via JS -->
+                </div>
+            </div>
+        </section>
+
+        <!-- ==================== TAB 4: MINI GAMES ==================== -->
+        <section id="view-minigames" class="tab-content hidden">
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+
+                <!-- Game 1: Star Catcher -->
+                <div class="glass-panel p-5 rounded-2xl flex flex-col justify-between border-cyan-500/20">
+                    <div>
+                        <div class="text-3xl mb-2">⭐</div>
+                        <h3 class="text-lg font-bold text-cyan-400 mb-1">Ловец Звёзд</h3>
+                        <p class="text-xs text-gray-400 mb-4">Нажимайте на падающие звёзды и кристаллы, чтобы зарабатывать монеты за 15 секунд!</p>
+                    </div>
+                    <button onclick="openMiniGame('catcher')" class="w-full bg-cyan-600 hover:bg-cyan-500 text-white font-bold py-2.5 rounded-xl text-sm transition-all shadow-md">
+                        Играть в Ловец Звёзд
+                    </button>
+                </div>
+
+                <!-- Game 2: Wheel of Fortune -->
+                <div class="glass-panel p-5 rounded-2xl flex flex-col justify-between border-fuchsia-500/20">
+                    <div>
+                        <div class="text-3xl mb-2">🎡</div>
+                        <h3 class="text-lg font-bold text-fuchsia-400 mb-1">Колесо Удачи</h3>
+                        <p class="text-xs text-gray-400 mb-4">Вращайте рулетку удачи и выигрывайте до 1000 монет с каждого вращения!</p>
+                    </div>
+                    <button onclick="openMiniGame('wheel')" class="w-full bg-fuchsia-600 hover:bg-fuchsia-500 text-white font-bold py-2.5 rounded-xl text-sm transition-all shadow-md">
+                        Крутить Колесо
+                    </button>
+                </div>
+
+                <!-- Game 3: Lucky Card Flip -->
+                <div class="glass-panel p-5 rounded-2xl flex flex-col justify-between border-amber-500/20">
+                    <div>
+                        <div class="text-3xl mb-2">🃏</div>
+                        <h3 class="text-lg font-bold text-amber-400 mb-1">Карты Удачи</h3>
+                        <p class="text-xs text-gray-400 mb-4">Испытайте свою интуицию! Переверните карточное джекпот-поле и найдите золотые монеты.</p>
+                    </div>
+                    <button onclick="openMiniGame('cards')" class="w-full bg-amber-600 hover:bg-amber-500 text-white font-bold py-2.5 rounded-xl text-sm transition-all shadow-md">
+                        Открыть Карты
+                    </button>
+                </div>
+            </div>
+
+            <!-- Mini Game Container Modal Overlay -->
+            <div id="miniGameModal" class="hidden fixed inset-0 z-50 bg-black/80 backdrop-blur-md flex items-center justify-center p-4">
+                <div class="glass-panel w-full max-w-lg p-6 rounded-3xl relative border border-slate-700 shadow-2xl flex flex-col items-center">
+                    <button onclick="closeMiniGame()" class="absolute top-4 right-4 text-gray-400 hover:text-white text-xl">
+                        <i class="fa-solid fa-xmark"></i>
+                    </button>
+
+                    <!-- Dynamic Sub-game Content Inserted Here -->
+                    <div id="miniGameContainer" class="w-full flex flex-col items-center"></div>
+                </div>
+            </div>
+        </section>
+
+        <!-- ==================== TAB 5: CHEAT SMARTPHONE ==================== -->
+        <section id="view-phone" class="tab-content hidden">
+            <div class="flex justify-center items-center py-4">
+
+                <!-- Cyberpunk Smartphone Body -->
+                <div class="w-full max-w-[320px] bg-slate-950 rounded-[40px] p-4 border-4 border-emerald-500/50 phone-case relative shadow-2xl">
+                    
+                    <!-- Phone Notch & Speaker -->
+                    <div class="w-32 h-5 bg-slate-900 mx-auto rounded-b-2xl mb-3 border-b border-x border-slate-800 flex justify-center items-center">
+                        <div class="w-10 h-1 bg-slate-700 rounded-full"></div>
+                    </div>
+
+                    <!-- Smartphone Screen -->
+                    <div class="bg-gradient-to-b from-slate-900 to-slate-950 rounded-[28px] p-4 border border-slate-800 min-h-[460px] flex flex-col justify-between">
+                        
+                        <!-- Header Status -->
+                        <div>
+                            <div class="flex justify-between items-center text-[10px] text-emerald-400 font-mono mb-2">
+                                <span>CYBER-OS 9.9</span>
+                                <span><i class="fa-solid fa-wifi mr-1"></i> 5G CHEAT</span>
+                            </div>
+
+                            <!-- Secret Display Box -->
+                            <div class="bg-black/80 border border-emerald-500/40 rounded-xl p-3 text-center mb-4 min-h-[60px] flex flex-col justify-center">
+                                <span class="text-[10px] text-gray-500 uppercase">Введите Чит-Код:</span>
+                                <span id="phoneDisplay" class="pixel-font text-emerald-400 text-sm tracking-widest break-all">_</span>
+                            </div>
+                        </div>
+
+                        <!-- Phone Keypad Grid -->
+                        <div class="grid grid-cols-3 gap-2.5 my-auto">
+                            <button onclick="pressKey('1')" class="bg-slate-800/80 hover:bg-slate-700 active:bg-emerald-600 text-white font-bold py-3 rounded-2xl border border-slate-700/60 transition-all text-lg">1</button>
+                            <button onclick="pressKey('2')" class="bg-slate-800/80 hover:bg-slate-700 active:bg-emerald-600 text-white font-bold py-3 rounded-2xl border border-slate-700/60 transition-all text-lg">2</button>
+                            <button onclick="pressKey('3')" class="bg-slate-800/80 hover:bg-slate-700 active:bg-emerald-600 text-white font-bold py-3 rounded-2xl border border-slate-700/60 transition-all text-lg">3</button>
+                            <button onclick="pressKey('4')" class="bg-slate-800/80 hover:bg-slate-700 active:bg-emerald-600 text-white font-bold py-3 rounded-2xl border border-slate-700/60 transition-all text-lg">4</button>
+                            <button onclick="pressKey('5')" class="bg-slate-800/80 hover:bg-slate-700 active:bg-emerald-600 text-white font-bold py-3 rounded-2xl border border-slate-700/60 transition-all text-lg">5</button>
+                            <button onclick="pressKey('6')" class="bg-slate-800/80 hover:bg-slate-700 active:bg-emerald-600 text-white font-bold py-3 rounded-2xl border border-slate-700/60 transition-all text-lg">6</button>
+                            <button onclick="pressKey('7')" class="bg-slate-800/80 hover:bg-slate-700 active:bg-emerald-600 text-white font-bold py-3 rounded-2xl border border-slate-700/60 transition-all text-lg">7</button>
+                            <button onclick="pressKey('8')" class="bg-slate-800/80 hover:bg-slate-700 active:bg-emerald-600 text-white font-bold py-3 rounded-2xl border border-slate-700/60 transition-all text-lg">8</button>
+                            <button onclick="pressKey('9')" class="bg-slate-800/80 hover:bg-slate-700 active:bg-emerald-600 text-white font-bold py-3 rounded-2xl border border-slate-700/60 transition-all text-lg">9</button>
+                            <button onclick="pressKey('*')" class="bg-slate-800/80 hover:bg-slate-700 active:bg-emerald-600 text-white font-bold py-3 rounded-2xl border border-slate-700/60 transition-all text-lg">*</button>
+                            <button onclick="pressKey('0')" class="bg-slate-800/80 hover:bg-slate-700 active:bg-emerald-600 text-white font-bold py-3 rounded-2xl border border-slate-700/60 transition-all text-lg">0</button>
+                            <button onclick="pressKey('#')" class="bg-slate-800/80 hover:bg-slate-700 active:bg-emerald-600 text-white font-bold py-3 rounded-2xl border border-slate-700/60 transition-all text-lg">#</button>
+                        </div>
+
+                        <!-- Action Buttons -->
+                        <div class="flex gap-2 mt-3">
+                            <button onclick="clearPhone()" class="w-1/3 bg-rose-900/80 hover:bg-rose-800 text-rose-200 font-bold py-3 rounded-2xl border border-rose-700/50 text-xs uppercase">
+                                Сброс
+                            </button>
+                            <button onclick="submitCheatCode()" class="w-2/3 bg-emerald-600 hover:bg-emerald-500 text-white font-bold py-3 rounded-2xl border border-emerald-400 text-xs uppercase flex items-center justify-center gap-1 shadow-lg">
+                                <i class="fa-solid fa-phone"></i> Ввести Код
+                            </button>
+                        </div>
+
+                        <!-- Cheat Code Clues -->
+                        <div class="mt-3 text-[10px] text-gray-400 text-center bg-slate-900/90 p-2 rounded-xl border border-slate-800">
+                            💡 Подсказки кодов: <span class="text-emerald-400 font-mono">9999</span>, <span class="text-emerald-400 font-mono">7777</span>, <span class="text-emerald-400 font-mono">1337</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+    </main>
+
+    <!-- FOOTER -->
+    <footer class="glass-panel border-t border-gray-800 py-3 text-center text-xs text-gray-500">
+        Крестики-Нолики PRO &copy; 2026 — Полнофункциональная игра с Музыкальным ТВ и Чит-Телефоном
+    </footer>
+
+    <script>
+        /* ===================================================================
+           STATE MANAGEMENT & SAVED DATA
+           =================================================================== */
+        let state = {
+            coins: parseInt(localStorage.getItem('xo_coins')) || 100,
+            unlockedSkins: JSON.parse(localStorage.getItem('xo_skins')) || [0, 1], // 0:❌, 1:⭕
+            activeSkinX: parseInt(localStorage.getItem('xo_active_x')) || 0,
+            activeSkinO: parseInt(localStorage.getItem('xo_active_o')) || 1,
+            scoreX: 0,
+            scoreO: 0,
+            draws: 0,
+            gameMode: 'ai', // 'ai' or 'pvp'
+            board: Array(9).fill(null),
+            currentPlayer: 'X',
+            gameActive: true
+        };
+
+        // 30 Unique Skins Catalog Database
+        const SKINS_CATALOG = [
+            { id: 0, icon: '❌', name: 'Классический X', price: 0, category: 'classic' },
+            { id: 1, icon: '⭕', name: 'Классический O', price: 0, category: 'classic' },
+            { id: 2, icon: '⚡', name: 'Молния', price: 100, category: 'classic' },
+            { id: 3, icon: '🔥', name: 'Огонь', price: 150, category: 'classic' },
+            { id: 4, icon: '❄️', name: 'Лёд', price: 150, category: 'classic' },
+            { id: 5, icon: '🚀', name: 'Ракета', price: 200, category: 'space' },
+            { id: 6, icon: '🛸', name: 'НЛО', price: 250, category: 'space' },
+            { id: 7, icon: '🪐', name: 'Планета', price: 300, category: 'space' },
+            { id: 8, icon: '👾', name: 'Пришелец', price: 350, category: 'space' },
+            { id: 9, icon: '🌟', name: 'Звезда', price: 200, category: 'space' },
+            { id: 10, icon: '🥷', name: 'Ниндзя', price: 300, category: 'hero' },
+            { id: 11, icon: '🤖', name: 'Робот', price: 350, category: 'hero' },
+            { id: 12, icon: '👑', name: 'Корона', price: 500, category: 'hero' },
+            { id: 13, icon: '💀', name: 'Череп', price: 250, category: 'hero' },
+            { id: 14, icon: 'Ghost', iconHtml: '👻', name: 'Призрак', price: 200, category: 'hero' },
+            { id: 15, icon: '🦁', name: 'Лев', price: 250, category: 'animal' },
+            { id: 16, icon: '🐉', name: 'Дракон', price: 400, category: 'animal' },
+            { id: 17, icon: '🦊', name: 'Лиса', price: 200, category: 'animal' },
+            { id: 18, icon: 'Pand', iconHtml: '🐼', name: 'Панда', price: 250, category: 'animal' },
+            { id: 19, icon: '🐸', name: 'Лягушка', price: 180, category: 'animal' },
+            { id: 20, icon: '🍕', name: 'Пицца', price: 150, category: 'food' },
+            { id: 21, icon: '🍔', name: 'Бургер', price: 150, category: 'food' },
+            { id: 22, icon: '🍩', name: 'Пончик', price: 180, category: 'food' },
+            { id: 23, icon: '🍦', name: 'Мороженое', price: 120, category: 'food' },
+            { id: 24, icon: '🍣', name: 'Суши', price: 220, category: 'food' },
+            { id: 25, icon: '💎', name: 'Алмаз', price: 600, category: 'nature' },
+            { id: 26, icon: '🍀', name: 'Клевер', price: 150, category: 'nature' },
+            { id: 27, icon: '🌸', name: 'Сакура', price: 200, category: 'nature' },
+            { id: 28, icon: '🌊', name: 'Волна', price: 250, category: 'nature' },
+            { id: 29, icon: '🔮', name: 'Шар Магии', price: 500, category: 'nature' }
+        ];
+
+        /* Save state */
+        function saveState() {
+            localStorage.setItem('xo_coins', state.coins);
+            localStorage.setItem('xo_skins', JSON.stringify(state.unlockedSkins));
+            localStorage.setItem('xo_active_x', state.activeSkinX);
+            localStorage.setItem('xo_active_o', state.activeSkinO);
+            updateCoinsUI();
+        }
+
+        function updateCoinsUI() {
+            document.getElementById('coinBalance').innerText = state.coins;
+        }
+
+        /* ===================================================================
+           TAB SWITCHING SYSTEM
+           =================================================================== */
+        function switchTab(tabId) {
+            document.querySelectorAll('.tab-content').forEach(el => el.classList.add('hidden'));
+            document.querySelectorAll('.nav-btn').forEach(btn => {
+                btn.classList.remove('bg-indigo-600', 'text-white');
+                btn.classList.add('bg-slate-800', 'text-gray-300');
+            });
+
+            document.getElementById(`view-${tabId}`).classList.remove('hidden');
+            const activeBtn = document.getElementById(`tab-${tabId}`);
+            if(activeBtn) {
+                activeBtn.classList.add('bg-indigo-600', 'text-white');
+                activeBtn.classList.remove('bg-slate-800', 'text-gray-300');
+            }
+
+            if(tabId === 'shop') renderShopGrid();
+        }
+
+        /* ===================================================================
+           TV & SYNTHESIZER AUDIO SYSTEM (Web Audio API)
+           =================================================================== */
+        let audioCtx = null;
+        let isTvOn = true;
+        let isPlaying = false;
+        let currentTrackIndex = 0;
+        let volumeNode = null;
+        let synthInterval = null;
+
+        const TRACKS = [
+            { name: "Track 1: 8-Bit Retro Beat", genre: "Arcade Chiptune", speed: 180, notes: [261, 329, 392, 523, 392, 329, 261, 196] },
+            { name: "Track 2: Neon Synthwave", genre: "Retro Chill Synth", speed: 240, notes: [220, 261, 329, 440, 329, 261, 220, 174] },
+            { name: "Track 3: Cyber Phonk Trap", genre: "Punchy Synth Bass", speed: 150, notes: [130, 146, 164, 130, 196, 164, 146, 110] },
+            { name: "Track 4: Ambient Lofi Space", genre: "Soft Cyber Relax", speed: 320, notes: [329, 392, 493, 587, 493, 392, 329, 261] },
+            { name: "Track 5: Energetic Victory", genre: "Hype Game Beat", speed: 160, notes: [349, 440, 523, 698, 523, 440, 349, 293] }
+        ];
+
+        function initAudio() {
+            if (!audioCtx) {
+                audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+                volumeNode = audioCtx.createGain();
+                volumeNode.gain.value = 0.3;
+                volumeNode.connect(audioCtx.destination);
+            }
+        }
+
+        function playSynthTone(freq, duration) {
+            if (!audioCtx || !isPlaying || !isTvOn) return;
+            try {
+                const osc = audioCtx.createOscillator();
+                const gain = audioCtx.createGain();
+                osc.type = 'square';
+                osc.frequency.value = freq;
+
+                gain.gain.setValueAtTime(0.15, audioCtx.currentTime);
+                gain.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + duration);
+
+                osc.connect(gain);
+                gain.connect(volumeNode);
+
+                osc.start();
+                osc.stop(audioCtx.currentTime + duration);
+            } catch(e){}
+        }
+
+        function startMusicEngine() {
+            if (synthInterval) clearInterval(synthInterval);
+            let noteStep = 0;
+            const track = TRACKS[currentTrackIndex];
+
+            synthInterval = setInterval(() => {
+                if(isPlaying && isTvOn) {
+                    const freq = track.notes[noteStep % track.notes.length];
+                    playSynthTone(freq, track.speed / 1000);
+                    noteStep++;
+                }
+            }, track.speed);
+        }
+
+        function togglePlayMusic() {
+            initAudio();
+            if (audioCtx.state === 'suspended') audioCtx.resume();
+
+            isPlaying = !isPlaying;
+            updateTvUI();
+            if (isPlaying) startMusicEngine();
+        }
+
+        function toggleTVPower() {
+            initAudio();
+            isTvOn = !isTvOn;
+            const canvas = document.getElementById('tvCanvas');
+            const tvStatus = document.getElementById('tvStatusBadge');
+
+            if (!isTvOn) {
+                isPlaying = false;
+                canvas.classList.add('crt-screen-off');
+                tvStatus.innerText = "OFF";
+                tvStatus.className = "bg-red-950 px-3 py-1 rounded text-red-500 font-bold border border-red-800";
+                document.getElementById('tvPulsePing').classList.add('hidden');
+                document.getElementById('tvPulseDot').className = "relative inline-flex rounded-full h-3 w-3 bg-gray-500";
+                document.getElementById('nowPlayingHeader').innerText = "ТВ выключен";
+            } else {
+                canvas.classList.remove('crt-screen-off');
+                canvas.classList.add('crt-screen-on');
+                setTimeout(() => canvas.classList.remove('crt-screen-on'), 500);
+                isPlaying = true;
+                startMusicEngine();
+                updateTvUI();
+            }
+        }
+
+        function changeChannel(index) {
+            currentTrackIndex = index;
+            document.querySelectorAll('.chan-btn').forEach((btn, idx) => {
+                if(idx === index) {
+                    btn.className = "chan-btn bg-cyan-600 text-white px-2.5 py-1 rounded text-xs font-bold";
+                } else {
+                    btn.className = "chan-btn bg-zinc-800 text-gray-300 hover:bg-zinc-700 px-2.5 py-1 rounded text-xs font-bold";
+                }
+            });
+            document.getElementById('tvChanDisplay').innerText = `КАНАЛ ${index + 1}`;
+            if(isTvOn) {
+                isPlaying = true;
+                startMusicEngine();
+            }
+            updateTvUI();
+        }
+
+        function nextTrack() {
+            changeChannel((currentTrackIndex + 1) % TRACKS.length);
+        }
+
+        function prevTrack() {
+            changeChannel((currentTrackIndex - 1 + TRACKS.length) % TRACKS.length);
+        }
+
+        function setVolume(val) {
+            if (volumeNode) volumeNode.gain.value = val;
+        }
+
+        function updateTvUI() {
+            const track = TRACKS[currentTrackIndex];
+            document.getElementById('tvTrackName').innerText = track.name;
+            document.getElementById('tvGenre').innerText = `Жанр: ${track.genre}`;
+            
+            const tvStatus = document.getElementById('tvStatusBadge');
+            const btnPlay = document.getElementById('tvPlayBtn');
+            const nowHeader = document.getElementById('nowPlayingHeader');
+
+            if (isPlaying && isTvOn) {
+                tvStatus.innerText = "PLAYING";
+                tvStatus.className = "bg-black/70 px-3 py-1 rounded text-emerald-400 font-bold border border-emerald-500/30";
+                btnPlay.innerHTML = `<i class="fa-solid fa-pause"></i> Пауза`;
+                document.getElementById('tvPulsePing').classList.remove('hidden');
+                document.getElementById('tvPulseDot').className = "relative inline-flex rounded-full h-3 w-3 bg-cyan-400";
+                nowHeader.innerText = track.name;
+            } else {
+                tvStatus.innerText = "PAUSED";
+                tvStatus.className = "bg-black/70 px-3 py-1 rounded text-yellow-400 font-bold border border-yellow-500/30";
+                btnPlay.innerHTML = `<i class="fa-solid fa-play"></i> Играть`;
+                document.getElementById('tvPulsePing').classList.add('hidden');
+                document.getElementById('tvPulseDot').className = "relative inline-flex rounded-full h-3 w-3 bg-yellow-500";
+                if(isTvOn) nowHeader.innerText = "На паузе";
+            }
+            renderPlaylistUI();
+        }
+
+        function renderPlaylistUI() {
+            const list = document.getElementById('playlistItems');
+            list.innerHTML = TRACKS.map((t, i) => `
+                <div onclick="changeChannel(${i})" class="p-2.5 rounded-xl flex justify-between items-center cursor-pointer transition-all ${i === currentTrackIndex ? 'bg-cyan-950/80 border border-cyan-500/50 text-cyan-300' : 'bg-slate-900/60 hover:bg-slate-800 text-gray-400'}">
+                    <div class="flex items-center gap-3">
+                        <i class="fa-solid ${i === currentTrackIndex && isPlaying ? 'fa-compact-disc animate-spin text-cyan-400' : 'fa-music'}"></i>
+                        <div>
+                            <p class="font-bold">${t.name}</p>
+                            <p class="text-[10px] text-gray-500">${t.genre}</p>
+                        </div>
+                    </div>
+                    <span class="text-[10px] bg-slate-800 px-2 py-1 rounded">КАНАЛ ${i + 1}</span>
+                </div>
+            `).join('');
+        }
+
+        /* TV Canvas Animation Effects */
+        function initTvCanvas() {
+            const canvas = document.getElementById('tvCanvas');
+            const ctx = canvas.getContext('2d');
+
+            function resize() {
+                canvas.width = canvas.parentElement.clientWidth;
+                canvas.height = canvas.parentElement.clientHeight;
+            }
+            resize();
+            window.addEventListener('resize', resize);
+
+            let particles = Array(30).fill(0).map(() => ({
+                x: Math.random() * canvas.width,
+                y: Math.random() * canvas.height,
+                speed: 1 + Math.random() * 3,
+                size: Math.random() * 3
+            }));
+
+            function animate() {
+                ctx.fillStyle = 'rgba(10, 15, 30, 0.2)';
+                ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+                if (isTvOn && isPlaying) {
+                    // Draw visualizer particle warp
+                    ctx.fillStyle = '#06b6d4';
+                    particles.forEach(p => {
+                        p.y += p.speed;
+                        if (p.y > canvas.height) p.y = 0;
+                        ctx.beginPath();
+                        ctx.arc(p.x, p.y, p.size, 0, Math.PI * 2);
+                        ctx.fill();
+                    });
+
+                    // Spectrum wave
+                    ctx.beginPath();
+                    ctx.strokeStyle = '#ec4899';
+                    ctx.lineWidth = 2;
+                    for (let x = 0; x < canvas.width; x += 10) {
+                        let y = canvas.height / 2 + Math.sin(x * 0.05 + Date.now() * 0.005) * 20;
+                        if (x === 0) ctx.moveTo(x, y);
+                        else ctx.lineTo(x, y);
+                    }
+                    ctx.stroke();
+                }
+
+                // Digital Clock Update
+                const d = new Date();
+                document.getElementById('tvDigitalClock').innerText = d.toTimeString().split(' ')[0];
+
+                requestAnimationFrame(animate);
+            }
+            animate();
+        }
+
+        /* ===================================================================
+           TIC TAC TOE GAME ENGINE
+           =================================================================== */
+        const winCombos = [
+            [0, 1, 2], [3, 4, 5], [6, 7, 8],
+            [0, 3, 6], [1, 4, 7], [2, 5, 8],
+            [0, 4, 8], [2, 4, 6]
+        ];
+
+        function setGameMode(mode) {
+            state.gameMode = mode;
+            document.getElementById('mode-ai').className = mode === 'ai' ? 'mode-btn bg-cyan-600 text-white py-2 px-3 rounded-xl text-sm font-semibold border border-cyan-400/30' : 'mode-btn bg-slate-800 text-gray-300 py-2 px-3 rounded-xl text-sm font-semibold hover:bg-slate-700';
+            document.getElementById('mode-pvp').className = mode === 'pvp' ? 'mode-btn bg-cyan-600 text-white py-2 px-3 rounded-xl text-sm font-semibold border border-cyan-400/30' : 'mode-btn bg-slate-800 text-gray-300 py-2 px-3 rounded-xl text-sm font-semibold hover:bg-slate-700';
+            document.getElementById('aiDifficultyGroup').style.display = mode === 'ai' ? 'block' : 'none';
+            resetGame();
+        }
+
+        function makeMove(index) {
+            if (!state.gameActive || state.board[index] !== null) return;
+
+            const currentSkin = state.currentPlayer === 'X' ? SKINS_CATALOG[state.activeSkinX].icon : SKINS_CATALOG[state.activeSkinO].icon;
+            state.board[index] = state.currentPlayer;
+
+            const cells = document.querySelectorAll('.cell');
+            cells[index].innerText = currentSkin;
+
+            if (checkWin(state.currentPlayer)) {
+                endGame(state.currentPlayer);
+                return;
+            }
+
+            if (state.board.every(cell => cell !== null)) {
+                endGame('draw');
+                return;
+            }
+
+            state.currentPlayer = state.currentPlayer === 'X' ? 'O' : 'X';
+            updateGameStatus();
+
+            if (state.gameMode === 'ai' && state.currentPlayer === 'O' && state.gameActive) {
+                setTimeout(makeAIMove, 400);
+            }
+        }
+
+        function makeAIMove() {
+            const diff = document.getElementById('aiDifficulty').value;
+            let move;
+
+            if (diff === 'easy') {
+                const empty = state.board.map((v, i) => v === null ? i : null).filter(v => v !== null);
+                move = empty[Math.floor(Math.random() * empty.length)];
+            } else if (diff === 'medium') {
+                move = Math.random() > 0.5 ? minimax(state.board, 'O').index : state.board.indexOf(null);
+            } else {
+                move = minimax(state.board, 'O').index;
+            }
+
+            if (move !== undefined && move !== -1) makeMove(move);
+        }
+
+        function minimax(newBoard, player) {
+            const availSpots = newBoard.map((v, i) => v === null ? i : null).filter(v => v !== null);
+
+            if (checkWinForBoard(newBoard, 'X')) return { score: -10 };
+            if (checkWinForBoard(newBoard, 'O')) return { score: 10 };
+            if (availSpots.length === 0) return { score: 0 };
+
+            const moves = [];
+            for (let i = 0; i < availSpots.length; i++) {
+                const move = {};
+                move.index = availSpots[i];
+                newBoard[availSpots[i]] = player;
+
+                if (player === 'O') {
+                    const result = minimax(newBoard, 'X');
+                    move.score = result.score;
+                } else {
+                    const result = minimax(newBoard, 'O');
+                    move.score = result.score;
+                }
+
+                newBoard[availSpots[i]] = null;
+                moves.push(move);
+            }
+
+            let bestMove;
+            if (player === 'O') {
+                let bestScore = -10000;
+                for (let i = 0; i < moves.length; i++) {
+                    if (moves[i].score > bestScore) {
+                        bestScore = moves[i].score;
+                        bestMove = i;
+                    }
+                }
+            } else {
+                let bestScore = 10000;
+                for (let i = 0; i < moves.length; i++) {
+                    if (moves[i].score < bestScore) {
+                        bestScore = moves[i].score;
+                        bestMove = i;
+                    }
+                }
+            }
+            return moves[bestMove];
+        }
+
+        function checkWin(player) {
+            return checkWinForBoard(state.board, player);
+        }
+
+        function checkWinForBoard(board, player) {
+            return winCombos.some(combo => combo.every(index => board[index] === player));
+        }
+
+        function endGame(winner) {
+            state.gameActive = false;
+            const banner = document.getElementById('gameStatusBanner');
+
+            if (winner === 'draw') {
+                state.draws++;
+                document.getElementById('scoreDraws').innerText = state.draws;
+                banner.innerText = "Ничья! +20 монет";
+                banner.className = "mb-6 px-6 py-2 rounded-full bg-amber-900/80 border border-amber-500 text-amber-300 font-bold text-center tracking-wide text-lg shadow-md";
+                state.coins += 20;
+            } else {
+                if (winner === 'X') state.scoreX++;
+                else state.scoreO++;
+
+                document.getElementById('scoreX').innerText = state.scoreX;
+                document.getElementById('scoreO').innerText = state.scoreO;
+
+                banner.innerText = `Победа Игрока ${winner}! +50 монет`;
+                banner.className = "mb-6 px-6 py-2 rounded-full bg-emerald-900/80 border border-emerald-500 text-emerald-300 font-bold text-center tracking-wide text-lg shadow-md";
+                state.coins += 50;
+
+                try { confetti({ particleCount: 80, spread: 70, origin: { y: 0.6 } }); } catch(e){}
+            }
+            saveState();
+        }
+
+        function updateGameStatus() {
+            const banner = document.getElementById('statusText');
+            banner.innerText = `Ход игрока ${state.currentPlayer}`;
+        }
+
+        function resetGame() {
+            state.board = Array(9).fill(null);
+            state.currentPlayer = 'X';
+            state.gameActive = true;
+            document.querySelectorAll('.cell').forEach(cell => cell.innerText = '');
+            const banner = document.getElementById('gameStatusBanner');
+            banner.className = "mb-6 px-6 py-2 rounded-full bg-slate-800/90 border border-cyan-500/40 text-cyan-300 font-bold text-center tracking-wide text-lg shadow-md flex items-center gap-3";
+            banner.innerHTML = `<span id="statusIcon"><i class="fa-solid fa-play text-cyan-400"></i></span> <span id="statusText">Ход игрока X</span>`;
+            updateActiveSkinsDisplay();
+        }
+
+        function updateActiveSkinsDisplay() {
+            document.getElementById('activeSkinX').innerText = SKINS_CATALOG[state.activeSkinX].icon;
+            document.getElementById('activeSkinO').innerText = SKINS_CATALOG[state.activeSkinO].icon;
+        }
+
+        /* ===================================================================
+           SHOP SYSTEM (30 SKINS)
+           =================================================================== */
+        let currentShopFilter = 'all';
+
+        function filterShop(category) {
+            currentShopFilter = category;
+            document.querySelectorAll('.shop-filter-btn').forEach(btn => {
+                btn.className = "shop-filter-btn bg-slate-800 text-gray-300 hover:bg-slate-700 px-3 py-1 rounded-lg text-xs font-bold";
+            });
+            event.target.className = "shop-filter-btn active bg-amber-500 text-black px-3 py-1 rounded-lg text-xs font-bold";
+            renderShopGrid();
+        }
+
+        function renderShopGrid() {
+            const grid = document.getElementById('skinsGrid');
+            const items = SKINS_CATALOG.filter(s => currentShopFilter === 'all' || s.category === currentShopFilter);
+
+            grid.innerHTML = items.map(skin => {
+                const isUnlocked = state.unlockedSkins.includes(skin.id);
+                const isEquippedX = state.activeSkinX === skin.id;
+                const isEquippedO = state.activeSkinO === skin.id;
+
+                let actionBtn = '';
+                if (!isUnlocked) {
+                    actionBtn = `<button onclick="buySkin(${skin.id})" class="w-full mt-2 bg-amber-500 hover:bg-amber-400 text-black text-xs font-bold py-1.5 rounded-lg flex items-center justify-center gap-1">
+                        <i class="fa-solid fa-coins"></i> ${skin.price}
+                    </button>`;
+                } else {
+                    actionBtn = `
+                        <div class="grid grid-cols-2 gap-1 mt-2">
+                            <button onclick="equipSkin(${skin.id}, 'X')" class="text-[10px] py-1 rounded font-bold ${isEquippedX ? 'bg-cyan-600 text-white' : 'bg-slate-800 text-gray-300 hover:bg-slate-700'}">X</button>
+                            <button onclick="equipSkin(${skin.id}, 'O')" class="text-[10px] py-1 rounded font-bold ${isEquippedO ? 'bg-fuchsia-600 text-white' : 'bg-slate-800 text-gray-300 hover:bg-slate-700'}">O</button>
+                        </div>
+                    `;
+                }
+
+                return `
+                    <div class="glass-card p-3 rounded-xl border border-slate-800/80 flex flex-col justify-between text-center relative">
+                        <div class="text-3xl my-2">${skin.icon}</div>
+                        <div>
+                            <p class="text-xs font-bold text-gray-200 truncate">${skin.name}</p>
+                            ${actionBtn}
+                        </div>
+                    </div>
+                `;
+            }).join('');
+        }
+
+        function buySkin(id) {
+            const skin = SKINS_CATALOG.find(s => s.id === id);
+            if (state.coins >= skin.price) {
+                state.coins -= skin.price;
+                state.unlockedSkins.push(id);
+                saveState();
+                renderShopGrid();
+            } else {
+                alert("Недостаточно монет!");
+            }
+        }
+
+        function equipSkin(id, slot) {
+            if (slot === 'X') state.activeSkinX = id;
+            if (slot === 'O') state.activeSkinO = id;
+            saveState();
+            renderShopGrid();
+            updateActiveSkinsDisplay();
+        }
+
+        /* ===================================================================
+           3 MINI GAMES ENGINE
+           =================================================================== */
+        function openMiniGame(type) {
+            const modal = document.getElementById('miniGameModal');
+            const container = document.getElementById('miniGameContainer');
+            modal.classList.remove('hidden');
+
+            if (type === 'catcher') {
+                container.innerHTML = `
+                    <h3 class="text-lg font-bold text-cyan-400 mb-2">Ловец Звёзд</h3>
+                    <p class="text-xs text-gray-400 mb-3">Нажимайте на элементы!</p>
+                    <div id="catcherArea" class="w-full h-64 bg-slate-950 rounded-2xl relative overflow-hidden border border-slate-800 cursor-pointer"></div>
+                    <div class="flex justify-between w-full mt-3 text-sm">
+                        <span>Очки: <span id="catcherScore" class="font-bold text-cyan-400">0</span></span>
+                        <span>Время: <span id="catcherTime" class="font-bold text-amber-400">15</span>с</span>
+                    </div>
+                `;
+                startStarCatcher();
+            } else if (type === 'wheel') {
+                container.innerHTML = `
+                    <h3 class="text-lg font-bold text-fuchsia-400 mb-4">Колесо Удачи</h3>
+                    <canvas id="wheelCanvas" width="260" height="260" class="mb-4"></canvas>
+                    <button onclick="spinWheel()" id="spinBtn" class="bg-fuchsia-600 hover:bg-fuchsia-500 text-white font-bold px-6 py-2 rounded-xl text-sm">Вращать!</button>
+                `;
+                drawWheel();
+            } else if (type === 'cards') {
+                container.innerHTML = `
+                    <h3 class="text-lg font-bold text-amber-400 mb-3">Карты Удачи</h3>
+                    <div class="grid grid-cols-3 gap-3 w-full max-w-xs my-2" id="cardGrid">
+                        ${[100, 20, 500, 50, 0, 200].map((val, idx) => `
+                            <div onclick="flipCard(this, ${val})" class="bg-slate-800 hover:bg-slate-700 h-24 rounded-xl border border-slate-700 flex items-center justify-center text-2xl font-bold cursor-pointer transition-all">❓</div>
+                        `).join('')}
+                    </div>
+                `;
+            }
+        }
+
+        function closeMiniGame() {
+            document.getElementById('miniGameModal').classList.add('hidden');
+        }
+
+        /* Mini-game 1: Star Catcher */
+        function startStarCatcher() {
+            let score = 0;
+            let time = 15;
+            const area = document.getElementById('catcherArea');
+
+            const timer = setInterval(() => {
+                time--;
+                if (document.getElementById('catcherTime')) {
+                    document.getElementById('catcherTime').innerText = time;
+                }
+                if (time <= 0) {
+                    clearInterval(timer);
+                    clearInterval(spawnInterval);
+                    state.coins += score * 10;
+                    saveState();
+                    alert(`Игра окончена! Заработано ${score * 10} монет!`);
+                    closeMiniGame();
+                }
+            }, 1000);
+
+            const spawnInterval = setInterval(() => {
+                if (!document.getElementById('catcherArea')) return;
+                const star = document.createElement('div');
+                star.innerText = Math.random() > 0.3 ? '⭐' : '💎';
+                star.className = 'absolute text-2xl animate-bounce cursor-pointer';
+                star.style.left = Math.random() * 85 + '%';
+                star.style.top = Math.random() * 80 + '%';
+                star.onclick = () => {
+                    score++;
+                    if (document.getElementById('catcherScore')) {
+                        document.getElementById('catcherScore').innerText = score;
+                    }
+                    star.remove();
+                };
+                area.appendChild(star);
+                setTimeout(() => star.remove(), 1200);
+            }, 600);
+        }
+
+        /* Mini-game 2: Wheel of Fortune */
+        function drawWheel() {
+            const canvas = document.getElementById('wheelCanvas');
+            if(!canvas) return;
+            const ctx = canvas.getContext('2d');
+            const rewards = [50, 100, 200, 500, 0, 1000];
+            const colors = ['#06b6d4', '#ec4899', '#f59e0b', '#10b981', '#64748b', '#8b5cf6'];
+
+            for (let i = 0; i < 6; i++) {
+                ctx.beginPath();
+                ctx.fillStyle = colors[i];
+                ctx.moveTo(130, 130);
+                ctx.arc(130, 130, 120, (i * 60 * Math.PI) / 180, ((i + 1) * 60 * Math.PI) / 180);
+                ctx.fill();
+                ctx.fillStyle = '#fff';
+                ctx.font = 'bold 12px sans-serif';
+                ctx.fillText(rewards[i], 130 + Math.cos((i * 60 + 30) * Math.PI / 180) * 70 - 10, 130 + Math.sin((i * 60 + 30) * Math.PI / 180) * 70);
+            }
+        }
+
+        function spinWheel() {
+            const rewards = [50, 100, 200, 500, 0, 1000];
+            const winIndex = Math.floor(Math.random() * rewards.length);
+            const prize = rewards[winIndex];
+
+            state.coins += prize;
+            saveState();
+            alert(`Вам выпало: ${prize} монет!`);
+            closeMiniGame();
+        }
+
+        /* Mini-game 3: Lucky Cards */
+        function flipCard(el, val) {
+            el.innerText = `💰 ${val}`;
+            el.className = "bg-amber-900 border border-amber-500 text-amber-300 h-24 rounded-xl flex items-center justify-center text-sm font-bold";
+            state.coins += val;
+            saveState();
+            setTimeout(() => {
+                alert(`Вы выиграли ${val} монет!`);
+                closeMiniGame();
+            }, 500);
+        }
+
+        /* ===================================================================
+           INTERACTIVE CHEAT-PHONE LOGIC
+           =================================================================== */
+        let phoneInput = "";
+
+        function pressKey(key) {
+            if (phoneInput.length < 12) {
+                phoneInput += key;
+                document.getElementById('phoneDisplay').innerText = phoneInput;
+            }
+        }
+
+        function clearPhone() {
+            phoneInput = "";
+            document.getElementById('phoneDisplay').innerText = "_";
+        }
+
+        function submitCheatCode() {
+            const code = phoneInput.toUpperCase();
+
+            if (code === "9999" || code === "MONEY9999") {
+                state.coins += 9999;
+                saveState();
+                alert("ЧИТ АКТИВИРОВАН: +9999 МОНЕТ!");
+            } else if (code === "7777" || code === "UNLOCKALL") {
+                state.unlockedSkins = SKINS_CATALOG.map(s => s.id);
+                saveState();
+                alert("ЧИТ АКТИВИРОВАН: РАЗБЛОКИРОВАНЫ ВСЕ 30 СКИНОВ!");
+            } else if (code === "1337" || code === "GODMODE") {
+                alert("ЧИТ АКТИВИРОВАН: РЕЖИМ БОГА ВЫХОДИТ В ПОБЕДУ!");
+                endGame('X');
+            } else {
+                alert("НЕВЕРНЫЙ ЧИТ-КОД!");
+            }
+            clearPhone();
+        }
+
+        /* Application Initialization */
+        window.onload = function() {
+            updateCoinsUI();
+            updateActiveSkinsDisplay();
+            initTvCanvas();
+            renderPlaylistUI();
+        };
+    </script>
+</body>
+</html>
